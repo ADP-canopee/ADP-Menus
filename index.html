@@ -844,7 +844,7 @@ h1,h2,h3,h4{font-family:'Fredoka',sans-serif}
         <button onclick="document.getElementById('new-recipes-widget').style.display='none'" style="background:rgba(255,255,255,.15);border:none;border-radius:100px;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;cursor:pointer">✕</button>
       </div>
       <div id="new-recipes-list" style="display:flex;flex-direction:column;gap:7px"></div>
-      <button onclick="switchToRecettes()" style="margin-top:10px;width:100%;padding:9px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:10px;color:#fff;font-size:13px;font-weight:700;font-family:'Fredoka',sans-serif;cursor:pointer">Voir toutes mes recettes →</button>
+      <button onclick="switchToRecettes()" style="margin-top:10px;width:100%;padding:9px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:10px;color:#fff;font-size:13px;font-weight:700;font-family:'Fredoka',sans-serif;cursor:pointer">Voir toutes les recettes →</button>
     </div>
     <div class="stats4">
       <div class="scard"><div class="sico">👶</div><div class="sval" id="s-e">8</div><div class="slbl">Enfants</div></div>
@@ -2527,7 +2527,7 @@ function renderAdminRecipes(filter){
     html += '<div class="recipe-item' + (isDisabled?" disabled-rec":"") + '">';
     html += '<span class="recipe-type" style="color:' + typeColor + ';background:' + typeBg + '">' + p.t + '</span>';
     html += '<span class="recipe-name">' + p.n + '</span>';
-    html += '<button class="toggle-sw ' + (isDisabled?"off":"on") + '" data-recipe-id="'+p.id+'" onclick="toggleRecipe(\'"+p.id+"\')" title="' + (isDisabled?"Activer":"Désactiver") + '"></button>';
+    html += '<button class="toggle-sw ' + (isDisabled?"off":"on") + '" onclick="toggleRecipe(\'"+p.id+"\')" title="' + (isDisabled?"Activer":"Désactiver") + '"></button>';
     html += '</div>';
   });
   $("admin-recipe-list").innerHTML = html;
@@ -2539,12 +2539,16 @@ function toggleRecipe(id){
   if(idx > -1) disabled.splice(idx,1);
   else disabled.push(id);
   localStorage.setItem("canopee_admin_disabled_recipes", JSON.stringify(disabled));
-  if(SHEET_URL&&SESSION) sheetPost("save_config",SESSION.user,{e:S.e,a:S.a,budgetM:S.budgetM||3,budgetS:S.budgetS||2.5,mode:S.mode,regimes:S.regimes,disabled_recipes:disabled},null);
   renderAdminRecipes(adminRecipeFilter);
-  var isNowDisabled = disabled.indexOf(id) > -1;
-  var btn = document.querySelector('.toggle-sw[data-recipe-id="'+id+'"]');
-  if(btn){ btn.className="toggle-sw "+(isNowDisabled?"off":"on"); btn.title=isNowDisabled?"Activer":"Désactiver"; }
-  if(typeof showToast==="function") showToast(isNowDisabled ? "Recette désactivée" : "Recette activée ✓");
+  // Visual feedback
+  var btn = document.querySelector('[data-recipe-id="'+id+'"]');
+  if(btn){
+    var isNowDisabled = disabled.indexOf(id) > -1;
+    btn.textContent = isNowDisabled ? "Activer" : "Désactiver";
+    btn.style.background = isNowDisabled ? "var(--green)" : "var(--coral-pale)";
+    btn.style.color = isNowDisabled ? "#fff" : "var(--coral)";
+  }
+  if(typeof showToast==="function") showToast(disabled.indexOf(id)>-1 ? "Recette désactivée" : "Recette activée ✓");
 }
 
 function filterRecipes(btn){
@@ -2737,36 +2741,38 @@ function renderBiblio(filter){
   } else if(filter==="entree"){ items = DB.entrees; }
   else if(filter==="dessert"){ items = DB.desserts; }
   else items = DB.plats;
-  var persoR = items.filter(function(r){return r.custom;})
+  /* Recettes perso (toutes, depuis allCustomRecipes) en tête */
+  var persoIds = (typeof allCustomRecipes!=="undefined" ? allCustomRecipes : []).map(function(r){return r.id;});
+  var persoR = items.filter(function(r){return r.custom||persoIds.indexOf(r.id)>-1;})
     .sort(function(a,b){return parseInt((b.id||"").replace("custom_",""))-parseInt((a.id||"").replace("custom_",""));});
-  var stdR = items.filter(function(r){return !r.custom;});
+  var stdR = items.filter(function(r){return !r.custom&&persoIds.indexOf(r.id)===-1;});
   items = persoR.concat(stdR);
-  var ico={viande:"\uD83E\uDD69",poisson:"\uD83D\uDC1F",veg:"\uD83E\uDD66"};
+  var ico={viande:"🥩",poisson:"🐟",veg:"🥦"};
   el.innerHTML = items.map(function(r){
     var isDisabled = disabled.indexOf(r.id) > -1;
-    var t = r.t||"entr\u00e9e";
+    var t = r.t||"entrée";
     var isNew = r.custom&&(Date.now()-(parseInt((r.id||"").replace("custom_","")||0)))<7*24*3600*1000;
     var badgeHtml = "";
     if(r.custom){
       badgeHtml = "<div style=\"display:flex;gap:4px;margin-top:3px\">";
-      badgeHtml += "<span style=\"background:linear-gradient(135deg,#004060,#005478);color:#fff;padding:1px 7px;border-radius:100px;font-size:9px;font-weight:700\">\u2B50 Perso</span>";
-      if(isNew) badgeHtml += "<span style=\"background:linear-gradient(135deg,#E97551,#F4A87C);color:#fff;padding:1px 7px;border-radius:100px;font-size:9px;font-weight:700\">\u2726 Nouveau</span>";
+      badgeHtml += "<span style=\"background:linear-gradient(135deg,#004060,#005478);color:#fff;padding:1px 7px;border-radius:100px;font-size:9px;font-weight:700\">⭐ Perso</span>";
+      if(isNew) badgeHtml += "<span style=\"background:linear-gradient(135deg,#E97551,#F4A87C);color:#fff;padding:1px 7px;border-radius:100px;font-size:9px;font-weight:700\">✦ Nouveau</span>";
       if(r.createdBy) badgeHtml += "<span style=\"color:#6A9AAA;font-size:9px;line-height:1.8\"> par "+r.createdBy+"</span>";
       badgeHtml += "</div>";
     }
     var borderStyle = r.custom ? "1.5px solid #A8D0E0" : (isDisabled ? "1px solid #ddd" : "1px solid var(--border)");
-    var slotType = (t==="entr\u00e9e"||filter==="entree") ? "e" : (filter==="dessert" ? "d" : "p");
+    var slotType = (t==="entrée"||filter==="entree") ? "e" : (filter==="dessert" ? "d" : "p");
     var out = "<div style=\"background:#fff;border-radius:12px;border:"+borderStyle+";padding:10px 14px;display:flex;align-items:center;gap:10px;opacity:"+(isDisabled?".5":"1")+"\">";
-    out += "<span style=\"font-size:18px\">"+(ico[t]||"\uD83E\uDD57")+"</span>";
+    out += "<span style=\"font-size:18px\">"+(ico[t]||"🥗")+"</span>";
     out += "<div style=\"flex:1;min-width:0\">";
     out += "<div style=\"font-size:13px;font-weight:600;color:var(--txt)\">"+r.n+"</div>";
-    out += "<div style=\"font-size:10px;color:var(--txt3);margin-top:1px\">\u23F1 "+(r.prep||0)+" min"+(r.ns?" \u00b7 NS "+r.ns:"")+"</div>";
+    out += "<div style=\"font-size:10px;color:var(--txt3);margin-top:1px\">⏱ "+(r.prep||0)+" min"+(r.ns?" · NS "+r.ns:"")+"</div>";
     out += badgeHtml;
     out += "</div>";
-    out += "<button onclick=\"openRec(\'"+slotType+"\',\'"+r.id+"\');\" style=\"background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:5px 9px;font-size:11px;font-weight:600;cursor:pointer;color:var(--txt2);white-space:nowrap\">\uD83D\uDC41 Voir</button>";
+    out += "<button onclick=\"openRec(\'"+slotType+"\',\'"+r.id+"\');\" style=\"background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:5px 9px;font-size:11px;font-weight:600;cursor:pointer;color:var(--txt2);white-space:nowrap\">👁 Voir</button>";
     out += "</div>";
     return out;
-  }).join("") || "<div style=\"text-align:center;padding:2rem;color:var(--txt3)\">Aucune recette dans cette cat\u00e9gorie.</div>";
+  }).join("") || "<div style=\"text-align:center;padding:2rem;color:var(--txt3)\">Aucune recette dans cette catégorie.</div>";
 }
 
 // ═══ PLACE PICKER — sélection manuelle depuis le menu ═══
@@ -2845,7 +2851,7 @@ function pickAndApply(encId){
 function switchToRecettes(){var btn=document.querySelector(".bn[onclick*=mesrecettes]");goP("mesrecettes",btn||document.querySelector(".bn"));}
 function updateRecipeCounters(){
   var base = DB ? DB.plats.length + (DB.entrees||[]).length + (DB.desserts||[]).length : 0;
-  var perso = typeof mesRecettes !== "undefined" ? mesRecettes.length : 0;
+  var perso = typeof allCustomRecipes !== "undefined" ? allCustomRecipes.length : 0;
   var el1 = document.getElementById("count-recipes-base");
   var el2 = document.getElementById("count-recipes-perso");
   if(el1) el1.textContent = base;
@@ -2854,7 +2860,8 @@ function updateRecipeCounters(){
   var listEl = document.getElementById("new-recipes-list");
   if(!widget||!listEl) return;
   var now = Date.now();
-  var newRec = (typeof mesRecettes!=="undefined" ? mesRecettes : []).filter(function(r){
+  /* Widget : nouvelles recettes de tout le monde (pool global) */
+  var newRec = (typeof allCustomRecipes!=="undefined" ? allCustomRecipes : []).filter(function(r){
     return r.custom && (now - parseInt((r.id||"").replace("custom_","")||0)) < 7*24*3600*1000;
   }).sort(function(a,b){return parseInt((b.id||"").replace("custom_",""))-parseInt((a.id||"").replace("custom_",""));});
   if(!newRec.length){ widget.style.display="none"; return; }
@@ -2989,20 +2996,18 @@ loadUserData = function(name){
 };
 
 
-var mesRecettes=[];var rfAllergsSelected=[];var MR_KEY="canopee_mes_recettes_v1";
-function loadMesRecettes(){try{var raw=localStorage.getItem(MR_KEY);if(raw)mesRecettes=JSON.parse(raw);}catch(e){mesRecettes=[];}mesRecettes.forEach(function(r){if(!DB.plats.some(function(p){return p.id===r.id;}))DB.plats.push(r);});}
-function saveMesRecettes(){try{localStorage.setItem(MR_KEY,JSON.stringify(mesRecettes));}catch(e){}}
+var mesRecettes=[];var allCustomRecipes=[];var rfAllergsSelected=[];var MR_KEY="canopee_mes_recettes_v1";
+function loadMesRecettes(){try{var raw=localStorage.getItem(MR_KEY);if(raw)allCustomRecipes=JSON.parse(raw);}catch(e){allCustomRecipes=[];}/* mesRecettes = seulement MES recettes (filtrées au login, vide au démarrage) */mesRecettes=SESSION?allCustomRecipes.filter(function(r){return r.createdBy===SESSION.user;}):[];allCustomRecipes.forEach(function(r){if(!DB.plats.some(function(p){return p.id===r.id;}))DB.plats.push(r);});}
+function saveMesRecettes(){/* Sauvegarde toujours le pool global */try{localStorage.setItem(MR_KEY,JSON.stringify(allCustomRecipes));}catch(e){}}
 function injectRecetteInDB(r){if(!DB.plats.some(function(p){return p.id===r.id;}))DB.plats.push(r);}
 function toggleRecetteForm(){var f=document.getElementById("rec-form");var v=f.style.display!=="none";f.style.display=v?"none":"block";if(!v){buildRFAllergens();clearRecetteForm();}}
 function buildRFAllergens(){var c=document.getElementById("rf-allergens");if(!c)return;rfAllergsSelected=[];c.innerHTML="";(typeof ALLERGENS!=="undefined"?ALLERGENS:[]).forEach(function(a){var btn=document.createElement("button");btn.type="button";btn.style.cssText="padding:6px 10px;border-radius:100px;border:1.5px solid #C0D8E0;background:#fff;cursor:pointer;font-size:11px;font-weight:600;color:#3A6070;margin:2px;";btn.textContent=a.ico+" "+a.lbl;btn.onclick=function(){var i=rfAllergsSelected.indexOf(a.id);if(i>-1){rfAllergsSelected.splice(i,1);btn.style.background="#fff";btn.style.color="#3A6070";btn.style.borderColor="#C0D8E0";}else{rfAllergsSelected.push(a.id);btn.style.background="#7B2D8B";btn.style.color="#fff";btn.style.borderColor="#7B2D8B";}};c.appendChild(btn);});}
 function clearRecetteForm(){["rf-nom","rf-info","rf-ingr","rf-steps"].forEach(function(id){var el=document.getElementById(id);if(el)el.value="";});var p=document.getElementById("rf-prep");if(p)p.value=20;var ck=document.getElementById("rf-cook");if(ck)ck.value=30;}
-function saveRecette(){var nom=(document.getElementById("rf-nom").value||"").trim();if(!nom){alert("Veuillez saisir un nom.");return;}var type=document.getElementById("rf-type").value;var porc=document.getElementById("rf-porc").value==="1";var prep=parseInt(document.getElementById("rf-prep").value)||20;var cookV=parseInt(document.getElementById("rf-cook").value)||0;var info=(document.getElementById("rf-info").value||"").trim();var ingr=(document.getElementById("rf-ingr").value||"").split("\n").filter(function(l){return l.trim();}).map(function(l){var p2=l.split(",");return[p2[0].trim(),(p2[1]||"q.s.").trim()];});if(!ingr.length)ingr=[["Ingrédients","à compléter"]];var steps=(document.getElementById("rf-steps").value||"").split("\n").filter(function(l){return l.trim();});if(!steps.length)steps=["Préparation à compléter."];var rec={id:"custom_"+Date.now(),n:nom,t:type,porc:porc,prep:prep,allergens:rfAllergsSelected.slice(),ingr:ingr,steps:steps,info:info||"Recette personnalisée.",custom:true,createdBy:SESSION?SESSION.user:""};if(cookV>0)rec.cook=cookV;mesRecettes.push(rec);injectRecetteInDB(rec);saveMesRecettes();renderMesRecettes();toggleRecetteForm();scheduleSyncToCloud();if(typeof showToast==="function")showToast("Recette ajoutée ✓");}
-function deleteRecette(id){var rec=mesRecettes.find(function(r){return r.id===id;});if(!rec)return;var isAdmin=SESSION&&SESSION.role==="admin";var isOwner=SESSION&&rec.createdBy&&rec.createdBy===SESSION.user;var noOwner=!rec.createdBy;if(!isAdmin&&!isOwner&&!noOwner){if(typeof showToast==="function")showToast("⛔ Seul l'auteur ou l'admin peut supprimer.");return;}if(noOwner&&!isAdmin){if(typeof showToast==="function")showToast("⛔ Seul l'admin peut supprimer.");return;}if(!confirm("Supprimer "+rec.n+" ?"))return;mesRecettes=mesRecettes.filter(function(r){return r.id!==id;});DB.plats=DB.plats.filter(function(p){return p.id!==id;});saveMesRecettes();renderMesRecettes();scheduleSyncToCloud();if(typeof showToast==="function")showToast("Recette supprimée");}
-function renderMesRecettes(){var list=document.getElementById("mes-recettes-list");if(!list)return;if(!mesRecettes.length){list.innerHTML='<div style="text-align:center;padding:2rem 1rem;color:#6A9AAA"><div style="font-size:40px;opacity:.4">📝</div><div style="font-family:Fredoka,sans-serif;font-size:16px;color:#002840;margin:5px 0;font-weight:600">Aucune recette</div><p style="font-size:13px;line-height:1.6">Créez votre première recette.<br>Elle sera intégrée aux menus générés.</p></div>';return;}var ico={viande:"🥩",poisson:"🐟",veg:"🥦"};var isAdminSession=SESSION&&SESSION.role==="admin";list.innerHTML=mesRecettes.map(function(r){var enc=encodeURIComponent(r.id);var isNew=(Date.now()-(parseInt((r.id||"").replace("custom_","")||0)))<7*24*3600*1000;var badgeNew=isNew?'<span style="background:linear-gradient(135deg,#E97551,#F4A87C);color:#fff;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700">✦ Nouveau</span>':'';
+function saveRecette(){var nom=(document.getElementById("rf-nom").value||"").trim();if(!nom){alert("Veuillez saisir un nom.");return;}var type=document.getElementById("rf-type").value;var porc=document.getElementById("rf-porc").value==="1";var prep=parseInt(document.getElementById("rf-prep").value)||20;var cookV=parseInt(document.getElementById("rf-cook").value)||0;var info=(document.getElementById("rf-info").value||"").trim();var ingr=(document.getElementById("rf-ingr").value||"").split("\n").filter(function(l){return l.trim();}).map(function(l){var p2=l.split(",");return[p2[0].trim(),(p2[1]||"q.s.").trim()];});if(!ingr.length)ingr=[["Ingrédients","à compléter"]];var steps=(document.getElementById("rf-steps").value||"").split("\n").filter(function(l){return l.trim();});if(!steps.length)steps=["Préparation à compléter."];var rec={id:"custom_"+Date.now(),n:nom,t:type,porc:porc,prep:prep,allergens:rfAllergsSelected.slice(),ingr:ingr,steps:steps,info:info||"Recette personnalisée.",custom:true,createdBy:SESSION?SESSION.user:""};if(cookV>0)rec.cook=cookV;mesRecettes.push(rec);allCustomRecipes.push(rec);injectRecetteInDB(rec);saveMesRecettes();renderMesRecettes();renderBiblio(_biblioFilter);toggleRecetteForm();scheduleSyncToCloud();if(typeof showToast==="function")showToast("Recette ajoutée ✓");}
+function deleteRecette(id){var rec=mesRecettes.find(function(r){return r.id===id;});if(!rec)return;if(!confirm("Supprimer "+rec.n+" ?"))return;mesRecettes=mesRecettes.filter(function(r){return r.id!==id;});allCustomRecipes=allCustomRecipes.filter(function(r){return r.id!==id;});DB.plats=DB.plats.filter(function(p){return p.id!==id;});saveMesRecettes();renderMesRecettes();renderBiblio(_biblioFilter);scheduleSyncToCloud();if(typeof showToast==="function")showToast("Recette supprimée");}
+function renderMesRecettes(){var list=document.getElementById("mes-recettes-list");if(!list)return;/* Filtrer : seulement les recettes créées par moi */var myRec=SESSION?allCustomRecipes.filter(function(r){return r.createdBy===SESSION.user;}):[];mesRecettes=myRec;if(!myRec.length){list.innerHTML='<div style="text-align:center;padding:2rem 1rem;color:#6A9AAA"><div style="font-size:40px;opacity:.4">📝</div><div style="font-family:Fredoka,sans-serif;font-size:16px;color:#002840;margin:5px 0;font-weight:600">Aucune recette</div><p style="font-size:13px;line-height:1.6">Créez votre première recette.<br>Elle sera visible par toutes.</p></div>';return;}var ico={viande:"🥩",poisson:"🐟",veg:"🥦"};list.innerHTML=myRec.map(function(r){var enc=encodeURIComponent(r.id);var isNew=(Date.now()-(parseInt((r.id||"").replace("custom_","")||0)))<7*24*3600*1000;var badgeNew=isNew?'<span style="background:linear-gradient(135deg,#E97551,#F4A87C);color:#fff;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700">✦ Nouveau</span>':'';
 var badgePerso='<span style="background:linear-gradient(135deg,#004060,#005478);color:#fff;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700">⭐ Perso</span>';
-var auteur=r.createdBy?'<span style="color:#6A9AAA;font-size:10px;font-weight:600"> · par '+r.createdBy+'</span>':'<span style="color:#6A9AAA;font-size:10px"> · auteur inconnu</span>';
-var canDelete=isAdminSession||(SESSION&&r.createdBy&&r.createdBy===SESSION.user);var btnDel=canDelete?'<button type="button" data-id="'+enc+'" onclick="deleteRecette(decodeURIComponent(this.dataset.id))" style="background:#FBE0D6;border:1px solid #E97551;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;color:#E97551">🗑</button>':'';
-return '<div style="background:#fff;border-radius:14px;border:1.5px solid #A8D0E0;overflow:hidden;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,64,96,.10)">'+('<div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E6F1F4">'+('<div style="display:flex;align-items:center;gap:8px;font-family:Fredoka,sans-serif;font-size:14px;font-weight:600;color:#004060">'+(ico[r.t]||"🍽️")+" "+r.n+auteur+"</div>")+('<div style="display:flex;gap:6px">'+('<button type="button" data-id="'+enc+'" onclick="openRec(\'p\',decodeURIComponent(this.dataset.id))" style="background:#E6F1F4;border:1px solid #C0D8E0;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;color:#004060">👁</button>')+btnDel+"</div>")+"</div>")+('<div style="padding:8px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+badgePerso+badgeNew+('<span style="color:#3A6070;font-size:11px;margin-left:auto">⏱ '+r.prep+' min'+(r.cook?' · 🔥 '+r.cook+' min':'')+'</span>')+'</div>')+'</div>';}).join("");}
+return '<div style="background:#fff;border-radius:14px;border:1.5px solid #A8D0E0;overflow:hidden;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,64,96,.10)">'+('<div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E6F1F4">'+('<div style="display:flex;align-items:center;gap:8px;font-family:Fredoka,sans-serif;font-size:14px;font-weight:600;color:#004060">'+(ico[r.t]||"🍽️")+" "+r.n+'</div>')+('<div style="display:flex;gap:6px">'+('<button type="button" data-id="'+enc+'" onclick="openRec(\'p\',decodeURIComponent(this.dataset.id))" style="background:#E6F1F4;border:1px solid #C0D8E0;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;color:#004060">👁</button>')+('<button type="button" data-id="'+enc+'" onclick="deleteRecette(decodeURIComponent(this.dataset.id))" style="background:#FBE0D6;border:1px solid #E97551;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;color:#E97551">🗑</button>')+'</div>')+'</div>')+('<div style="padding:8px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+badgePerso+badgeNew+('<span style="color:#3A6070;font-size:11px;margin-left:auto">⏱ '+r.prep+' min'+(r.cook?' · 🔥 '+r.cook+' min':'')+'</span>')+'</div>')+'</div>';}).join("");}
 function formatWeekLabel(ws){if(!ws)return"—";try{if(ws.indexOf("-W")>-1){var p=ws.split("-W");var d=new Date(parseInt(p[0]),0,1+(parseInt(p[1])-1)*7);var dow=d.getDay();d.setDate(d.getDate()-dow+(dow===0?-6:1));ws=d.getFullYear()+"-"+(d.getMonth()<9?"0":"")+(d.getMonth()+1)+"-"+(d.getDate()<10?"0":"")+d.getDate();}var pts=ws.split("-");var d1=new Date(parseInt(pts[0]),parseInt(pts[1])-1,parseInt(pts[2]));var d2=new Date(d1);d2.setDate(d2.getDate()+6);var M=["jan.","fév.","mars","avr.","mai","juin","juil.","août","sep.","oct.","nov.","déc."];return d1.getDate()+" "+M[d1.getMonth()]+" — "+d2.getDate()+" "+M[d2.getMonth()]+" "+d2.getFullYear();}catch(e){return ws;}}
 function renderSavedWeeksList(){var el=document.getElementById("saved-weeks-list");if(!el)return;var saved=getSavedMenus();if(!saved.length){el.innerHTML='<div style="color:var(--txt3);font-size:13px;padding:10px 0;text-align:center">Aucun menu sauvegardé</div>';return;}el.innerHTML=saved.map(function(w){var isCur=S.weekStart===w.weekStart;var enc=encodeURIComponent(w.weekStart);return'<div style="display:flex;align-items:center;padding:9px 0;border-bottom:1px solid var(--bg2);gap:8px">'+'<button data-w="'+enc+'" onclick="loadSavedWeek(decodeURIComponent(this.dataset.w))" style="flex:1;text-align:left;background:'+(isCur?'var(--green3)':'var(--bg)')+ ';border:1.5px solid '+(isCur?'var(--green)':'var(--border)')+';border-radius:var(--rsm);padding:7px 10px;cursor:pointer;font-size:13px;font-weight:600;color:'+(isCur?'var(--green)':'var(--txt)')+'">'+(isCur?'▶ ':'')+formatWeekLabel(w.weekStart)+' <span style="font-size:10px;font-weight:400;color:var(--txt3)">'+(w.sems===1?'1 sem.':'4 sem.')+'</span></button>'+'<button data-w="'+enc+'" onclick="deleteWeek(decodeURIComponent(this.dataset.w))" style="background:var(--coral-pale);color:var(--coral);border:1px solid var(--coral);border-radius:var(--rsm);padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0">🗑</button>'+'</div>';}).join("");}
 function deleteWeek(ws){if(!confirm("Supprimer ce menu ?"))return;var saved=getSavedMenus().filter(function(w){return w.weekStart!==ws;});localStorage.setItem(userKey("menus"),JSON.stringify(saved));if(S.weekStart===ws){S.data=[];S.weekStart=null;S.detW=null;document.getElementById("menu-ct").innerHTML="";document.getElementById("s-r").textContent="—";document.getElementById("menu-sub").textContent="—";}renderSavedWeeksList();scheduleSyncToCloud();if(typeof showToast==="function")showToast("Menu supprimé ✓");}
@@ -3012,8 +3017,8 @@ function promptSetUserPin(name){var pin=prompt("PIN de "+name+" (4 chiffres) :")
 function clearUserPin(name){if(!confirm("Supprimer le PIN de "+name+" ?"))return;localStorage.removeItem("canopee_userpin_"+name);renderAdminPins();if(typeof showToast==="function")showToast("PIN supprimé");}
 var SHEET_URL="https://script.google.com/macros/s/AKfycbyJWQniMZB6YL_Bn730Cl-HtaIKeSMidmxmtbxZvj26cAqDjwkhtOnGx70NGtOsfZ4B1g/exec";var _syncTimeout=null;
 function scheduleSyncToCloud(){if(!SHEET_URL||!SESSION)return;clearTimeout(_syncTimeout);_syncTimeout=setTimeout(syncToCloud,2000);}
-function syncToCloud(){if(!SHEET_URL||!SESSION)return;var user=SESSION.user;sheetPost("save_menus",user,getSavedMenus(),null);sheetPost("save_config",user,{e:S.e,a:S.a,budgetM:S.budgetM||3,budgetS:S.budgetS||2.5,mode:S.mode,regimes:S.regimes},null);sheetPost("save_allergenes",user,{global:S_allerg.global,profils:S_allerg.profils},null);if(typeof mesRecettes!=="undefined")sheetPost("save_recettes",user,mesRecettes,null);showSyncStatus("✅ Synchronisé");}
-function loadFromCloud(user,onDone){if(!SHEET_URL){if(onDone)onDone(false);return;}showSyncStatus("🔄 Chargement...");sheetGet("load_all",user,function(result){if(!result){showSyncStatus("⚠️ Hors ligne");if(onDone)onDone(false);return;}if(result.config){var cfg=result.config;S.e=parseInt(cfg.e)||S.e;S.a=parseInt(cfg.a)||S.a;S.budgetM=parseFloat(cfg.budgetM)||S.budgetM;S.budgetS=parseFloat(cfg.budgetS)||S.budgetS;S.mode=cfg.mode||S.mode;try{S.regimes=JSON.parse(cfg.regimes_json)||S.regimes;}catch(e){}localStorage.setItem("canopee_"+user+"_config",JSON.stringify({e:S.e,a:S.a,budgetM:S.budgetM,budgetS:S.budgetS,mode:S.mode,regimes:S.regimes}));try{if(cfg.disabled_recipes_json){var dis=JSON.parse(cfg.disabled_recipes_json);if(Array.isArray(dis))localStorage.setItem("canopee_admin_disabled_recipes",JSON.stringify(dis));}}catch(e){}}if(result.allergenes){try{S_allerg.global=JSON.parse(result.allergenes.global_json)||[];S_allerg.profils=JSON.parse(result.allergenes.profils_json)||[];localStorage.setItem("canopee_"+user+"_allergenes",JSON.stringify(S_allerg));}catch(e){}}if(result.menus&&result.menus.length>0){var parsed=result.menus.map(function(row){try{return{weekStart:row.weekStart,sems:parseInt(row.sems)||1,mode:row.mode||"s",data:JSON.parse(row.data_json||"[]")};}catch(e){return null;}}).filter(Boolean);localStorage.setItem("canopee_"+user+"_menus",JSON.stringify(parsed));}if(result.recettes&&result.recettes.length>0&&typeof mesRecettes!=="undefined"){mesRecettes=result.recettes.map(function(row){try{return{id:row.id,n:row.nom,t:row.type,porc:row.porc==="1",prep:parseInt(row.prep)||20,cook:parseInt(row.cook)||0,allergens:JSON.parse(row.allergens_json||"[]"),ingr:JSON.parse(row.ingr_json||"[]"),steps:JSON.parse(row.steps_json||"[]"),info:row.info||"",custom:true};}catch(e){return null;}}).filter(Boolean);mesRecettes.forEach(function(r){injectRecetteInDB(r);});localStorage.setItem(MR_KEY,JSON.stringify(mesRecettes));}showSyncStatus("✅ Données chargées");if(onDone)onDone(true);});}
+function syncToCloud(){if(!SHEET_URL||!SESSION)return;var user=SESSION.user;sheetPost("save_menus",user,getSavedMenus(),null);sheetPost("save_config",user,{e:S.e,a:S.a,budgetM:S.budgetM||3,budgetS:S.budgetS||2.5,mode:S.mode,regimes:S.regimes},null);sheetPost("save_allergenes",user,{global:S_allerg.global,profils:S_allerg.profils},null);/* Envoyer le pool global, pas seulement mes recettes */if(typeof allCustomRecipes!=="undefined")sheetPost("save_recettes",user,allCustomRecipes,null);showSyncStatus("✅ Synchronisé");}
+function loadFromCloud(user,onDone){if(!SHEET_URL){if(onDone)onDone(false);return;}showSyncStatus("🔄 Chargement...");sheetGet("load_all",user,function(result){if(!result){showSyncStatus("⚠️ Hors ligne");if(onDone)onDone(false);return;}if(result.config){var cfg=result.config;S.e=parseInt(cfg.e)||S.e;S.a=parseInt(cfg.a)||S.a;S.budgetM=parseFloat(cfg.budgetM)||S.budgetM;S.budgetS=parseFloat(cfg.budgetS)||S.budgetS;S.mode=cfg.mode||S.mode;try{S.regimes=JSON.parse(cfg.regimes_json)||S.regimes;}catch(e){}localStorage.setItem("canopee_"+user+"_config",JSON.stringify({e:S.e,a:S.a,budgetM:S.budgetM,budgetS:S.budgetS,mode:S.mode,regimes:S.regimes}));}if(result.allergenes){try{S_allerg.global=JSON.parse(result.allergenes.global_json)||[];S_allerg.profils=JSON.parse(result.allergenes.profils_json)||[];localStorage.setItem("canopee_"+user+"_allergenes",JSON.stringify(S_allerg));}catch(e){}}if(result.menus&&result.menus.length>0){var parsed=result.menus.map(function(row){try{return{weekStart:row.weekStart,sems:parseInt(row.sems)||1,mode:row.mode||"s",data:JSON.parse(row.data_json||"[]")};}catch(e){return null;}}).filter(Boolean);localStorage.setItem("canopee_"+user+"_menus",JSON.stringify(parsed));}if(result.recettes&&result.recettes.length>0){allCustomRecipes=result.recettes.map(function(row){try{return{id:row.id,n:row.nom,t:row.type,porc:row.porc==="1",prep:parseInt(row.prep)||20,cook:parseInt(row.cook)||0,allergens:JSON.parse(row.allergens_json||"[]"),ingr:JSON.parse(row.ingr_json||"[]"),steps:JSON.parse(row.steps_json||"[]"),info:row.info||"",custom:true,createdBy:row.user||""};}catch(e){return null;}}).filter(Boolean);allCustomRecipes.forEach(function(r){injectRecetteInDB(r);});localStorage.setItem(MR_KEY,JSON.stringify(allCustomRecipes));/* mesRecettes = seulement les miennes */mesRecettes=allCustomRecipes.filter(function(r){return r.createdBy===user;});}showSyncStatus("✅ Données chargées");if(onDone)onDone(true);});}
 function sheetGet(action,user,callback){if(!SHEET_URL||!user){if(callback)callback(null);return;}var url=SHEET_URL+"?action="+encodeURIComponent(action)+"&user="+encodeURIComponent(user);var xhr=new XMLHttpRequest();xhr.open("GET",url,true);xhr.onload=function(){try{if(callback)callback(JSON.parse(xhr.responseText));}catch(e){if(callback)callback(null);}};xhr.onerror=function(){if(callback)callback(null);};xhr.send();}
 function sheetPost(action,user,data,callback){if(!SHEET_URL||!user){if(callback)callback(null);return;}var xhr=new XMLHttpRequest();xhr.open("POST",SHEET_URL,true);xhr.setRequestHeader("Content-Type","text/plain");xhr.onload=function(){if(callback)callback({ok:true});};xhr.onerror=function(){if(callback)callback(null);};xhr.send(JSON.stringify({action:action,user:user,data:data}));}
 function showSyncStatus(msg){var el=document.getElementById("sync-status");if(!el)return;el.textContent=msg;el.style.opacity="1";clearTimeout(el._t);if(msg.indexOf("✅")>-1)el._t=setTimeout(function(){el.style.opacity="0";},3000);}
