@@ -505,9 +505,6 @@ h1,h2,h3,h4{font-family:'Fredoka',sans-serif}
   border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .toggle-sw.on::after{left:19px}
 .toggle-sw.off::after{left:3px}
-/* Footer copyright */
-#canopee-footer{position:fixed;bottom:72px;right:10px;z-index:50;pointer-events:none;}
-#canopee-footer span{font-size:9px;color:rgba(0,64,96,.35);font-family:'Quicksand',sans-serif;font-weight:500;letter-spacing:.2px;white-space:nowrap;}
 .admin-filter-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
 .admin-ftab{padding:7px 11px;border-radius:100px;border:1.5px solid var(--border);
   background:var(--white);cursor:pointer;font-size:11px;font-weight:600;
@@ -812,7 +809,7 @@ h1,h2,h3,h4{font-family:'Fredoka',sans-serif}
     <span class="hdr-user-name" id="hdr-user-name"></span>
     <button class="hdr-logout" onclick="logout()">⏏ Déconnexion</button>
   </div>
-  <button id="pwa-install-btn" style="display:none;align-items:center;gap:5px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:600;font-family:'Quicksand',sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent" title="Installer l'application">📲 Installer</button><span id="sync-status" style="font-size:10px;color:rgba(255,255,255,.65);font-weight:500;transition:opacity .5s;opacity:0;margin-left:6px;white-space:nowrap"></span>
+  <button id="pwa-install-btn" style="display:none;align-items:center;gap:5px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:600;font-family:'Quicksand',sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent" title="Installer l'application">📲 Installer</button><span id="sync-status" style="font-size:10px;color:rgba(255,255,255,.65);font-weight:500;transition:opacity .5s;opacity:0;margin-left:6px;white-space:nowrap"></span><span id="app-version" style="font-size:9px;color:rgba(255,255,255,.35);font-weight:400;margin-left:8px;white-space:nowrap">© 2025 Julien Piatti — ADP Canopée</span>
 </header>
 
 <main class="content">
@@ -1232,8 +1229,7 @@ function logout(){
   document.getElementById("mode-s").classList.add("on");
   document.getElementById("mode-m").classList.remove("on");
   goP("accueil", document.querySelector(".bn"));
-  /* Version dynamique */
-  (function(){var el=document.getElementById("footer-version");if(el){caches.keys().then(function(keys){var ver=keys.length?keys[0].replace("canopee-",""):"—";el.textContent="© 2025 Julien Piatti — ADP Canopée  "+ver;});}})();
+  (function(){caches.keys().then(function(keys){var ver=keys.length?keys[0].replace("canopee-",""):"—";var el=document.getElementById("app-version");if(el)el.textContent="© 2025 Julien Piatti — ADP Canopée  "+ver;});})();
   document.getElementById("bn-admin").classList.remove("visible");
   document.getElementById("login-screen").classList.remove("hidden");
   buildLoginGrid();
@@ -3070,7 +3066,5 @@ if('serviceWorker' in navigator){
   </div>
 </div>
 
-  <!-- Footer copyright -->
-  <div id="canopee-footer"><span id="footer-version">© 2025 Julien Piatti — ADP Canopée</span></div>
 </body>
 </html>
