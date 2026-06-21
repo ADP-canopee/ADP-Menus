@@ -1,7 +1,7 @@
 // Service Worker — Canopée Menus PWA
 // Cache offline pour fonctionnement sans réseau
 
-const CACHE_NAME = 'canopee-v13';
+const CACHE_NAME = 'canopee-v14';
 const ASSETS = [
   './',
   './index.html',
